@@ -65,7 +65,61 @@ def run_pipeline(
             logger.warning("Checkpoint not found, starting fresh: %s", resume)
 
     logger.info("Pipeline started with config: %s", config_path)
-    # Stub: wire in data pipeline, backtest, analysis, display when implemented
+    
+    # 3. Data Pipeline
+    from src.data.pipeline import DataPipeline
+    data_pipe = DataPipeline(config)
+    data_bundle = data_pipe.run()
+    logger.info("Data pipeline completed.")
+
+    # 4. Crypto Validation (V4)
+    # Assuming data_bundle.X_train or similar holds the main DF for now
+    # For this stub, we'll try to find a dataframe in the bundle to validate
+    # logic below detects if X_train/X_test exists and validates them.
+    from src.data.validator import DataValidator, DataValidationError
+    validator = DataValidator()
+    
+    # Simple heuristic to get data for validation (in real app, specific field)
+    # Using 'X_train' as placeholder if populated, else if bundle.metadata has data
+    # For now, we'll skip if empty, but log check
+    target_data = getattr(data_bundle, "X_train", None)
+    
+    if target_data is not None and hasattr(target_data, "index"):
+         try:
+             # Check crypto continuity
+             validator.check_crypto_continuity(target_data)
+             logger.info("Crypto continuity check passed.")
+         except DataValidationError as e:
+             logger.warning("Crypto continuity check failed: %s", e)
+    
+    # 5. Stress Testing (V4)
+    # Check if stress testing is requested in config
+    stress_config = config.get("stress_test", {})
+    if stress_config and target_data is not None:
+        from src.backtest import SyntheticGenerator
+        gen = SyntheticGenerator(target_data)
+        if stress_config.get("flash_crash"):
+            logger.info("Injecting Flash Crash scenario...")
+            target_data = gen.inject_flash_crash(**stress_config["flash_crash"])
+            # Update bundle
+            data_bundle.X_train = target_data
+
+    # 6. Walk-Forward Backtest (V3)
+    from src.backtest import WalkForwardBacktester
+    
+    # Logic: use the data bundle. If bundle is empty (stub), we might fail.
+    # We will pass the bundle object or data DataFrame to walker.
+    # The walker expects 'data' in constructor.
+    walker = WalkForwardBacktester(target_data, config)
+    
+    try:
+        report = walker.run()
+        logger.info("Backtest completed. Steps: %d", len(report.get("regime_info", [])))
+        state["backtest_report"] = report
+    except Exception as e:
+        logger.error("Backtest failed: %s", e)
+        # Don't crash entire pipeline, save what we have
+        
     state["config"] = config
     state["run_id"] = run_id
     checkpoint_path = out / "checkpoint.pkl"

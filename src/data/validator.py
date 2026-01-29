@@ -122,3 +122,33 @@ class DataValidator:
                 if abs(corr.iloc[i, j]) >= threshold:
                     pairs.append((corr.columns[i], corr.columns[j]))
         return pairs
+
+    def check_crypto_continuity(
+        self, df: pd.DataFrame, freq: str = "1h"
+    ) -> None:
+        """
+        Ensure 24/7 data continuity (no gaps > 1 period).
+        
+        Args:
+            df: DataFrame with datetime index.
+            freq: Expected frequency offset (e.g. '1h', '15min').
+            
+        Raises:
+            DataValidationError: If gaps are found.
+        """
+        if not hasattr(df, "index") or not isinstance(df.index, pd.DatetimeIndex):
+            return # Skip if not time series
+            
+        # Create full range
+        start, end = df.index.min(), df.index.max()
+        full_range = pd.date_range(start=start, end=end, freq=freq)
+        
+        # Check difference
+        # Efficient way: ensure lengths match or check diffs
+        if len(df) != len(full_range):
+            missing_dates = full_range.difference(df.index)
+            if not missing_dates.empty:
+                 raise DataValidationError(
+                    f"Crypto continuity breach: {len(missing_dates)} missing periods. "
+                    f"First missing: {missing_dates[0]}"
+                )

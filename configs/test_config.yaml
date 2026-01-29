@@ -1,0 +1,10 @@
+display:
+  run_id: 'test_run'
+backtest:
+  train_window: 50
+  test_window: 10
+  rebalance_freq: 10
+stress_test:
+  flash_crash:
+    magnitude: 0.2
+    duration: 5
