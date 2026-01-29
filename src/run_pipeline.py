@@ -130,6 +130,21 @@ def run_pipeline(
         results_dir = out / "results"
         results_dir.mkdir(parents=True, exist_ok=True)
         
+        # Export regime info with NaN handling
+        regime_info_serializable = []
+        for regime in backtest_report['regime_info']:
+            regime_dict = {}
+            for key, value in regime.items():
+                # Convert NaN to None for JSON serialization
+                import math
+                if isinstance(value, float) and math.isnan(value):
+                    regime_dict[key] = None
+                else:
+                    regime_dict[key] = value
+            regime_info_serializable.append(regime_dict)
+        
+        backtest_report['regime_info'] = regime_info_serializable
+        
         # Export backtest report as JSON
         report_path = results_dir / f"{run_id}_report.json"
         with open(report_path, 'w') as f:
@@ -151,10 +166,17 @@ def run_pipeline(
             if backtest_report['regime_info']:
                 f.write(f"\nRegime Analysis ({len(backtest_report['regime_info'])} regimes):\n")
                 for regime in backtest_report['regime_info']:
+                    sharpe_val = regime.get('sharpe')
+                    max_dd_val = regime.get('max_drawdown')
+                    
+                    # Format safely, handling None/NaN values
+                    sharpe_str = f"{sharpe_val:.3f}" if sharpe_val is not None else "N/A"
+                    max_dd_str = f"{max_dd_val:.3f}" if max_dd_val is not None else "N/A"
+                    
                     f.write(
                         f"  Regime {regime['regime']}: "
-                        f"Sharpe={regime.get('sharpe', 'N/A'):.3f}, "
-                        f"MaxDD={regime.get('max_drawdown', 'N/A'):.3f}\n"
+                        f"Sharpe={sharpe_str}, "
+                        f"MaxDD={max_dd_str}\n"
                     )
         logger.info(f"Summary saved: {summary_path}")
         

@@ -171,6 +171,9 @@ class WalkForwardBacktester:
         sharpe = returns_series.mean() / returns_series.std() * np.sqrt(252) if returns_series.std() > 0 else 0
         max_dd = self._compute_max_drawdown(cumulative_returns.values)
         
+        # Compute total return safely
+        total_return = float(cumulative_returns.iloc[-1] - 1) if len(cumulative_returns) > 0 else 0.0
+        
         # Regime-specific metrics
         regime_metrics = compute_regime_metrics(returns_series, regimes)
         
@@ -182,7 +185,7 @@ class WalkForwardBacktester:
             "metrics": {
                 "sharpe": float(sharpe),
                 "max_drawdown": float(max_dd),
-                "total_return": float(cumulative_returns.iloc[-1] - 1) if len(cumulative_returns) > 0 else 0,
+                "total_return": total_return,
                 "n_steps": step,
             },
             "regime_info": regime_metrics.to_dict('records') if not regime_metrics.empty else [],

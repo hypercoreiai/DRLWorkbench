@@ -81,7 +81,7 @@ class SklearnForecaster(BaseForecaster):
             }
         
         else:
-            raise ValueError(f"Unknown model_type: {self.model_type}")
+            raise ValueError(f"Unknown model_type: {self.model_type}. Supported types: 'ridge', 'rf', 'gbm'")
         
         logger.info(f"Built {self.hyperparams['model']} model: {self.hyperparams}")
     
@@ -155,6 +155,9 @@ class SklearnForecaster(BaseForecaster):
         """
         if self.model is None:
             raise PredictionError("Model not fitted")
+        
+        if len(X_test) == 0:
+            return np.array([])
         
         # Flatten sequences
         X_test_flat = X_test.reshape(X_test.shape[0], -1)

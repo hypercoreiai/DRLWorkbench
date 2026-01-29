@@ -174,7 +174,7 @@ class DataPipeline:
             
             return df
         except Exception as e:
-            logger.error(f"Failed to clean data: {e}")
+            logger.warning(f"CleanOHLCV failed, using unprocessed data: {e}")
             # Fallback: use first valid ticker without cleaning
             primary_ticker = list(valid_data.keys())[0]
             df = valid_data[primary_ticker].copy()
