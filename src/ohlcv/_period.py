@@ -112,7 +112,7 @@ def date_range_for_period(period: str) -> tuple[datetime, datetime]:
     """
     years, months, days = parse_period(period)
     
-    end = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    end = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
     
     # Subtract years and months using replace if possible
     # Handle year/month rollover manually
