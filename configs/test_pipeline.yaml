@@ -1,0 +1,30 @@
+# Test configuration for pipeline implementation
+
+data:
+  tickers: ["BTC-USD", "ETH-USD"]
+  source: "yfinance"
+  period: "1y"
+  time_step: 10
+  look_ahead: 1
+  test_size: 0.2
+  feature_selection: 
+    method: "correlation"
+    threshold: 0.3
+  validation:
+    check_stationarity: false
+    check_leakage: true
+    outlier_method: "iqr"
+    missing_threshold: 0.05
+
+backtest:
+  train_window: 252
+  test_window: 63
+  rebalance_freq: 21
+  transaction_cost: 0.001
+  bid_ask_spread: 0.001
+  regime_detection: 
+    method: "volatility"
+    periods: 63
+
+display:
+  run_id: "test_pipeline_001"
