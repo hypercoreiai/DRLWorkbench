@@ -1,0 +1,41 @@
+# DRL (PPO) pipeline
+# Extends default for reinforcement learning agent
+
+data:
+  tickers: []
+  period: "2y"
+  time_step: 10
+  look_ahead: 1
+  liquidity_filter: { method: "amihud", threshold: 0.001 }
+  volatility_filter: { min: 0.1, max: 0.5 }
+  feature_selection: { method: "correlation", threshold: 0.5 }
+  validation:
+    check_stationarity: true
+    check_leakage: true
+    outlier_method: "iqr"
+
+backtest:
+  train_window: 252
+  test_window: 63
+  rebalance_freq: 21
+  transaction_cost: 0.001
+  bid_ask_spread: 0.001
+  regime_detection: { method: "volatility", periods: 63 }
+
+models:
+  - type: "PPO"
+    hyperparameters: {}
+
+optimization:
+  methods: [risk_parity]
+  params: {}
+
+analysis:
+  metrics: [risk, regime, comparative]
+  regime_conditional: true
+  sensitivity_analysis: { parameters: [], range: "±10%" }
+
+display:
+  plots: [equity_curve, rolling_sharpe, regime_heatmap, diagnostics]
+  export_format: [pdf, html, csv]
+  run_id: "exp_drl_ppo"

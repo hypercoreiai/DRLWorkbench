@@ -1,0 +1,10 @@
+# Experiment grid: multiple configs for batch runs
+# Used with: python -m src.run_experiment --config_dir configs/ --experiment exp_001
+
+experiments:
+  - config: default.yaml
+    run_id: exp_001_default
+  - config: dl_portfolio.yaml
+    run_id: exp_001_dl_portfolio
+  - config: drl_ppo.yaml
+    run_id: exp_001_drl_ppo
