@@ -124,14 +124,15 @@ class DataValidator:
         return pairs
 
     def check_crypto_continuity(
-        self, df: pd.DataFrame, freq: str = "1h"
+        self, df: pd.DataFrame, freq: Optional[str] = None
     ) -> None:
         """
         Ensure 24/7 data continuity (no gaps > 1 period).
         
         Args:
             df: DataFrame with datetime index.
-            freq: Expected frequency offset (e.g. '1h', '15min').
+            freq: Expected frequency offset (e.g. '1h', '1d'). 
+                  If None, attempts to infer from data.
             
         Raises:
             DataValidationError: If gaps are found.
@@ -139,16 +140,27 @@ class DataValidator:
         if not hasattr(df, "index") or not isinstance(df.index, pd.DatetimeIndex):
             return # Skip if not time series
             
+        # Infer frequency if not provided
+        target_freq = freq
+        if target_freq is None:
+            if hasattr(df.index, "inferred_freq") and df.index.inferred_freq:
+                target_freq = df.index.inferred_freq
+            else:
+                target_freq = pd.infer_freq(df.index)
+                
+        # Fallback default if still None (though risky, better than hard crashing)
+        if target_freq is None:
+            target_freq = "1h" # Legacy default, or maybe warn? 
+            
         # Create full range
         start, end = df.index.min(), df.index.max()
-        full_range = pd.date_range(start=start, end=end, freq=freq)
+        full_range = pd.date_range(start=start, end=end, freq=target_freq)
         
         # Check difference
-        # Efficient way: ensure lengths match or check diffs
         if len(df) != len(full_range):
             missing_dates = full_range.difference(df.index)
             if not missing_dates.empty:
-                 raise DataValidationError(
-                    f"Crypto continuity breach: {len(missing_dates)} missing periods. "
-                    f"First missing: {missing_dates[0]}"
-                )
+                # If we have massive missing (like > 100), just show count
+                msg = (f"Crypto continuity breach: {len(missing_dates)} missing periods "
+                       f"(freq={target_freq}). First missing: {missing_dates[0]}")
+                raise DataValidationError(msg)
