@@ -2,7 +2,7 @@
 
 import pandas as pd
 import numpy as np
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 from statsmodels.tsa.stattools import adfuller
 from scipy import stats
 import logging
@@ -42,7 +42,7 @@ class DataValidator:
             f"outlier_threshold={outlier_threshold}"
         )
     
-    def validate_all(self, data: pd.DataFrame) -> Dict[str, any]:
+    def validate_all(self, data: pd.DataFrame) -> Dict[str, Any]:
         """
         Run all validation checks.
         
@@ -160,7 +160,7 @@ class DataValidator:
         
         return outliers
     
-    def check_data_types(self, data: pd.DataFrame) -> Dict[str, any]:
+    def check_data_types(self, data: pd.DataFrame) -> Dict[str, Any]:
         """
         Check if data types are appropriate.
         
@@ -203,7 +203,7 @@ class DataValidator:
         self,
         series: pd.Series,
         significance_level: float = 0.05
-    ) -> Dict[str, any]:
+    ) -> Dict[str, Any]:
         """
         Test for stationarity using Augmented Dickey-Fuller test.
         

@@ -5,7 +5,10 @@ This example shows how to:
 1. Set up logging
 2. Validate data
 3. Detect market regimes
-4. Run a basic backtest
+4. Analyze data quality
+
+Note: This is a basic example. For full backtesting examples,
+see the documentation and advanced examples in the notebooks directory.
 """
 
 import pandas as pd
@@ -72,20 +75,14 @@ if stationarity_result['is_stationary']:
 else:
     logger.info(f"✗ Returns may not be stationary (p-value: {stationarity_result['p_value']:.4f})")
 
-# Simple buy-and-hold strategy
-def buy_and_hold_strategy(data, **params):
-    """
-    Simple buy-and-hold strategy (for demonstration).
-    
-    In practice, this would return trading signals.
-    """
-    # This is a placeholder - actual implementation would return signals
-    return None
-
 logger.info("\nExample completed successfully!")
 logger.info("=" * 60)
-logger.info("DRLWorkbench is ready for use.")
-logger.info("Explore the documentation for more advanced features:")
+logger.info("DRLWorkbench core features demonstrated:")
+logger.info("✓ Data validation and quality checks")
+logger.info("✓ Market regime detection")
+logger.info("✓ Statistical testing (stationarity)")
+logger.info("")
+logger.info("For more advanced features, see the documentation:")
 logger.info("- Backtesting with walk-forward validation")
 logger.info("- Hyperparameter optimization")
 logger.info("- Ensemble models")

@@ -107,8 +107,8 @@ class BacktestEngine:
                     if trade:
                         trades.append(trade)
                 
-                # Record portfolio value
-                current_value = self.portfolio.get_value(row['close'])
+                # Record portfolio value (simplified for now - assumes cash-only portfolio)
+                current_value = self.portfolio.cash
                 portfolio_values.append({
                     'timestamp': timestamp,
                     'value': current_value

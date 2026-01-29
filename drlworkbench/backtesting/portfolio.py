@@ -45,22 +45,28 @@ class Portfolio:
         
         logger.debug("Portfolio reset")
     
-    def get_value(self, prices: Dict[str, float]) -> float:
+    def get_value(self, prices: Dict[str, float] = None, default_price: float = None) -> float:
         """
         Get total portfolio value.
         
         Parameters
         ----------
-        prices : Dict[str, float]
-            Current prices for all symbols.
+        prices : Dict[str, float], optional
+            Current prices for all symbols. If None and default_price provided,
+            uses default_price for all positions.
+        default_price : float, optional
+            Default price to use if prices dict is not provided.
             
         Returns
         -------
         float
             Total portfolio value (cash + positions).
         """
+        if prices is None:
+            prices = {}
+        
         position_value = sum(
-            qty * prices.get(symbol, 0.0)
+            qty * prices.get(symbol, default_price or 0.0)
             for symbol, qty in self.positions.items()
         )
         return self.cash + position_value
