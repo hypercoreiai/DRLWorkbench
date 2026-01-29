@@ -2,7 +2,7 @@ import types
 import sys
 import pandas as pd
 
-from ohlcv.yfinance_ohlcv import YFinanceOHLCV
+from src.ohlcv.yfinance_ohlcv import YFinanceOHLCV
 
 
 class FakeTicker:
@@ -20,7 +20,8 @@ def test_yfinance_ohlcv_tz_and_columns(monkeypatch):
     monkeypatch.setitem(sys.modules, "yfinance", fake_mod)
 
     v = YFinanceOHLCV()
-    df = v.get("AAPL", "1y")
+    result = v.get("AAPL", "1y")
+    df = result["AAPL"]
 
     assert not df.empty
     # columns lowercased

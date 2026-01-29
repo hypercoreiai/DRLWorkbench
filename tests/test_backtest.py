@@ -23,7 +23,7 @@ class TestWalkForwardBacktester:
         assert w.rebalance_freq == 21
 
     def test_run_returns_report(self):
-        data = pd.DataFrame(np.random.randn(300, 3))
+        data = pd.DataFrame(np.random.randn(400, 3))
         config = {"backtest": {"train_window": 252, "test_window": 63, "rebalance_freq": 21}}
         w = WalkForwardBacktester(data, config)
         report = w.run()

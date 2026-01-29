@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-from normalize.revin import RevinTransform
+from src.normalize.revin import RevinTransform
 
 
 def test_revin_transform_roundtrip():

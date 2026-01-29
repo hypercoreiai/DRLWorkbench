@@ -2,7 +2,7 @@
 # See PROJECT_OUTLINE_ML_DRL_ANALYSIS_V3.md Section 7.1
 
 data:
-  tickers: []
+  tickers: [BTC-USD, ETH-USD, SOL-USD]
   period: "2y"
   time_step: 10
   look_ahead: 1
@@ -22,7 +22,7 @@ backtest:
   bid_ask_spread: 0.001
   regime_detection: { method: "volatility", periods: 63 }
 
-models: []
+models: [drl]
 
 optimization:
   methods: [risk_parity, omega, cvar, hrp, efficient_frontier]
