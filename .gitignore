@@ -122,3 +122,4 @@ data/clean_ohlcv/
 data/normalized/
 *.csv
 *.log
+checkpoint.*
