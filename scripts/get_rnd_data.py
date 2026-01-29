@@ -58,7 +58,8 @@ def download_kraken_data(symbols: list[str], period: str = "1y") -> None:
     for symbol in symbols:
         try:
             print(f"\n📥 Downloading {symbol}...")
-            df = kraken.get(symbol, period=period, interval_min=1440)  # 1440 min = 1 day
+            result = kraken.get(symbol, period=period, interval_min=1440)  # 1440 min = 1 day
+            df = result[symbol]
             
             if df is None or df.empty:
                 print(f"  ✗ No data returned for {symbol}")
@@ -88,7 +89,8 @@ def download_yfinance_data(symbols: list[str], period: str = "3y") -> None:
     for symbol in symbols:
         try:
             print(f"\n📥 Downloading {symbol}...")
-            df = yfinance.get(symbol, period=period)
+            result = yfinance.get(symbol, period=period)
+            df = result[symbol]
             
             if df is None or df.empty:
                 print(f"  ✗ No data returned for {symbol}")

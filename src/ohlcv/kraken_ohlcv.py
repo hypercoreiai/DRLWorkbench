@@ -31,8 +31,8 @@ DEFAULT_INTERVAL = 60  # 1 hour
 KRAKEN_MAX_BARS = 720
 
 # Rate limiting (seconds)
-BASE_DELAY = 0.5  # Base delay between requests (Kraken allows ~15 req/sec)
-RATE_LIMIT_DELAY = 5.0  # Delay when rate limited
+BASE_DELAY = 3.0  # Conservative delay (Kraken allows ~1 req/sec but strictly enforces bursts)
+RATE_LIMIT_DELAY = 30.0  # Aggressive backoff when rate limited
 
 
 class KrakenOHLCV:
@@ -185,6 +185,10 @@ class KrakenOHLCV:
                 result = resp.get("result", {})
                 page_bars: list[list[Any]] = []
                 
+                # Kraken returns "last" which is the ID to be used as since for the next request
+                # We should prefer this over manual calculation
+                next_since = result.get("last")
+
                 for key, val in result.items():
                     if key == "last" or not isinstance(val, list):
                         continue
@@ -209,8 +213,20 @@ class KrakenOHLCV:
                     logging.info("%s: Reached end time, stopping pagination", pair)
                     break
                 
-                # Next page: since = last bar time
-                since = last_bar_time
+                # Update since for next iteration
+                # If Kraken provided 'last', use it. Otherwise fallback to last_bar_time + 1 to avoid overlap
+                if next_since:
+                    if next_since <= since:
+                        # Safety break if API is stuck returning same 'last'
+                        logging.warning("%s: Pagination stuck at %d", pair, since)
+                        break
+                    since = next_since
+                else:
+                    # Fallback logic
+                    if last_bar_time <= since:
+                         logging.warning("%s: Pagination stuck at manual time %d", pair, since)
+                         break
+                    since = last_bar_time # Some experimentation might be needed here, usually last_bar_time works if 'last' is missing
                 
                 # Rate limit between requests (Kraken: ~15 req/sec, use 0.5s = ~2 req/sec)
                 time.sleep(BASE_DELAY)
@@ -280,10 +296,11 @@ class KrakenOHLCV:
             Parsed JSON response or None on error
         """
         try:
+            print("Requesting data for", pair, "interval", interval, "since", since)
             r = requests.get(
                 self._base_url,
                 params={"pair": pair, "interval": interval, "since": since},
-                timeout=30,
+                timeout=2,
             )
             r.raise_for_status()
             data = r.json()
@@ -293,6 +310,10 @@ class KrakenOHLCV:
                 if error_msg:
                     # Check if it's a rate limiting error
                     error_str = str(error_msg).lower()
+                    
+                    if "unknown asset pair" in error_str:
+                        raise ValueError(f"Kraken EQuery:Unknown asset pair for {pair}")
+
                     if "too many requests" in error_str or "eapi:rate limit exceeded" in error_str:
                         logging.debug(
                             "Kraken rate limit for %s: %s", pair, error_msg
