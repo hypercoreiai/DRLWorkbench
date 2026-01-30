@@ -123,3 +123,5 @@ data/normalized/
 *.csv
 *.log
 checkpoint.*
+outputs/
+plots/

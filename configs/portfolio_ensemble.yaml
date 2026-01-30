@@ -1,0 +1,132 @@
+# Ensemble Portfolio Optimization Configuration
+# Combines multiple portfolio optimization methods with backtesting
+
+data:
+  # Load tickers from symbols/portfolio file
+  symbols_file: "src/symbols/portfolio"
+  
+  # Or specify directly (overrides symbols_file if set)
+  tickers: []
+  
+  # Time period for historical data
+  period: "2y"
+  
+  # Benchmark indexes for comparison
+  benchmark_tickers: ["SPY", "BTC-USD"]
+  
+  # Train/test split ratio
+  test_ratio: 0.2
+  
+  # Sequence parameters for forecasting models
+  time_step: 10
+  look_ahead: 1
+  
+  # Feature engineering options
+  features:
+    moving_averages: [10, 30]
+    volatility_windows: [10, 30]
+    momentum_windows: [10, 30]
+
+backtest:
+  # Walk-forward parameters
+  train_window: 252  # ~1 year of trading days
+  test_window: 63    # ~3 months
+  rebalance_freq: 21 # ~1 month
+  
+  # Transaction costs
+  transaction_cost: 0.001  # 0.1%
+  bid_ask_spread: 0.001    # 0.1%
+  
+  # Regime detection
+  regime_detection:
+    method: "volatility"  # Options: volatility, kmeans, gmm, rule_based
+    n_regimes: 3          # Bull, Bear, Sideways
+    periods: 63           # Window for regime calculation
+
+optimization:
+  # Portfolio optimization methods to compare
+  methods:
+    - risk_parity
+    - omega
+    - cvar
+    - hrp
+    - efficient_frontier
+  
+  # Method-specific parameters
+  params:
+    omega:
+      target_return: 0.0  # Risk-free rate
+    
+    cvar:
+      confidence: 0.95    # 95% confidence level
+    
+    efficient_frontier:
+      risk_aversion: 1.0  # Balance between return and risk
+      # target_return: null  # If set, optimizes for specific return
+
+models:
+  # Ensemble forecasting models (optional, for advanced use)
+  ensemble:
+    - type: "LSTM"
+      weight: 0.5
+      hyperparameters:
+        hidden_size: 64
+        num_layers: 2
+        dropout: 0.2
+        epochs: 100
+        batch_size: 32
+        learning_rate: 0.001
+        patience: 10
+    
+    - type: "SimpleAverage"
+      weight: 0.5
+
+analysis:
+  # Metrics to compute
+  metrics:
+    - forecasting
+    - risk
+    - regime
+    - comparative
+  
+  # Compute regime-conditional metrics
+  regime_conditional: true
+  
+  # Risk-free rate for Sharpe/Sortino
+  risk_free_rate: 0.02
+  
+  # Annualization factor
+  annualization: 252
+
+display:
+  # Plots to generate
+  plots:
+    - equity_curve
+    - drawdown
+    - rolling_sharpe
+    - rolling_volatility
+    - weights_comparison
+    - metrics_comparison
+  
+  # Export formats
+  export_format:
+    - csv
+    - png
+  
+  # Run identifier
+  run_id: "ensemble_po_v1"
+  
+  # Figure settings
+  figure:
+    dpi: 150
+    figsize: [16, 12]
+
+# Logging
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  
+# Checkpointing
+checkpoint:
+  enabled: true
+  frequency: "end"  # Options: step, end

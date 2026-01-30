@@ -1,0 +1,75 @@
+# Ensemble Autoencoder Configuration
+# Market regime detection, anomaly detection, feature extraction
+
+data:
+  symbols_file: "src/symbols/portfolio"
+  tickers: []
+  period: "2y"
+  test_ratio: 0.2
+
+models:
+  types:
+    - standard    # Standard autoencoder
+    - vae         # Variational autoencoder
+    - denoising   # Denoising autoencoder
+  
+  # Architecture
+  encoding_dims: [64, 32, 16]  # Layer dimensions
+  latent_dim: 16               # Latent space dimension
+  
+  # Training parameters
+  epochs: 100
+  batch_size: 128
+  learning_rate: 0.001
+  patience: 15
+  dropout: 0.2
+  activation: "relu"
+  
+  # Model-specific
+  vae:
+    beta: 1.0  # β-VAE parameter
+  
+  denoising:
+    noise_factor: 0.1
+
+analysis:
+  # Clustering in latent space
+  clustering:
+    method: "kmeans"  # kmeans, gmm, dbscan
+    n_clusters: 5
+  
+  # Anomaly detection
+  anomaly:
+    threshold_percentile: 95
+    method: "reconstruction"  # reconstruction, mahalanobis
+  
+  # Dimensionality reduction for visualization
+  visualization:
+    method: "tsne"  # tsne, umap, pca
+    perplexity: 30
+
+display:
+  plots:
+    - latent_space_2d
+    - latent_space_3d
+    - reconstruction_error
+    - anomaly_detection
+    - regime_clustering
+    - feature_importance
+    - training_curves
+    - reconstruction_comparison
+  
+  export_format:
+    - csv
+    - png
+  
+  run_id: "autoencoder_v1"
+  figure:
+    dpi: 150
+    figsize: [20, 14]
+
+logging:
+  level: "INFO"
+
+checkpoint:
+  enabled: true

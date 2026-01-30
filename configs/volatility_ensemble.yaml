@@ -1,0 +1,149 @@
+# Ensemble Volatility Forecasting Configuration
+# Combines GARCH, HAR, LSTM, and other models for volatility prediction
+
+data:
+  # Load tickers from symbols/portfolio file
+  symbols_file: "src/symbols/portfolio"
+  
+  # Or specify directly (overrides symbols_file if set)
+  tickers: []
+  
+  # Time period for historical data
+  period: "2y"
+  
+  # Train/test split ratio
+  test_ratio: 0.2
+
+volatility:
+  # Realized volatility estimators to calculate
+  estimators:
+    - standard          # Close-to-close (traditional)
+    - parkinson         # High-low range (more efficient)
+    - garman_klass      # OHLC (accounts for intraday)
+    # - rogers_satchell   # Drift-robust
+    # - yang_zhang        # Most comprehensive
+  
+  # Rolling window for volatility calculation
+  window: 20  # days
+
+models:
+  # Model types to train
+  types:
+    - garch   # GARCH(1,1) - classic volatility model
+    - har     # HAR - Heterogeneous Autoregressive
+    - lstm    # LSTM - Deep learning for volatility
+  
+  # GARCH configuration
+  garch:
+    p: 1  # ARCH order
+    q: 1  # GARCH order
+  
+  # HAR configuration
+  har:
+    daily_lag: 1
+    weekly_lag: 5
+    monthly_lag: 22
+  
+  # LSTM configuration
+  lstm:
+    seq_length: 22       # Input sequence length (~1 month)
+    hidden_size: 32      # LSTM hidden units
+    num_layers: 2        # Number of LSTM layers
+    dropout: 0.2         # Dropout rate
+    epochs: 50           # Training epochs
+    batch_size: 32       # Batch size
+    learning_rate: 0.001 # Learning rate
+    patience: 10         # Early stopping patience
+
+forecasting:
+  # Forecast horizon (days ahead)
+  horizon: 1
+  
+  # Multi-step forecasting
+  multi_step: false
+  max_horizon: 5  # If multi_step=true
+  
+  # Ensemble method
+  ensemble:
+    method: "average"  # Options: average, weighted, stacking
+    weights: null      # If method=weighted, specify weights for each model
+
+analysis:
+  # Volatility characteristics to analyze
+  characteristics:
+    - persistence      # Autocorrelation and mean reversion
+    - asymmetry        # Leverage effect (neg returns → higher vol)
+    - clustering       # Volatility clustering detection
+  
+  # Forecast evaluation metrics
+  metrics:
+    - mse              # Mean Squared Error
+    - rmse             # Root Mean Squared Error
+    - mae              # Mean Absolute Error
+    - mape             # Mean Absolute Percentage Error
+    - r2               # R-squared
+    - qlike            # Quasi-likelihood (asymmetric loss)
+    - log_loss         # Log volatility loss
+    - direction        # Direction accuracy
+    - var_coverage     # VaR coverage test
+  
+  # VaR confidence levels for coverage tests
+  var_confidence_levels:
+    - 0.95
+    - 0.99
+  
+  # Model comparison tests
+  comparison_tests:
+    - diebold_mariano  # Statistical test for forecast comparison
+
+display:
+  # Plots to generate
+  plots:
+    - volatility_forecast         # Time series of forecasts
+    - forecast_errors             # Forecast error plots
+    - scatter_actual_vs_pred      # Scatter plots
+    - realized_vol_comparison     # Compare RV estimators
+    - volatility_cone             # Historical vol distribution
+    - volatility_surface          # Multi-asset heatmap
+    - returns_vs_vol              # Returns and volatility overlay
+    - model_comparison            # Bar chart of metrics
+    - distribution_comparison     # Histogram comparison
+  
+  # Export formats
+  export_format:
+    - csv
+    - png
+  
+  # Run identifier
+  run_id: "vol_forecast_v1"
+  
+  # Figure settings
+  figure:
+    dpi: 150
+    figsize: [20, 14]
+
+# Advanced options
+advanced:
+  # Use GPU acceleration for LSTM
+  use_gpu: true
+  
+  # Parallel processing for multi-asset forecasting
+  parallel: false
+  n_jobs: 4
+  
+  # Regime-conditional volatility
+  regime_analysis: false
+  
+  # Rolling window forecasting
+  rolling_forecast: false
+  rolling_window: 252  # Retrain every year
+
+# Logging
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  
+# Checkpointing
+checkpoint:
+  enabled: true
+  frequency: "end"  # Options: step, end

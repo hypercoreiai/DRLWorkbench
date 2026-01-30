@@ -77,7 +77,10 @@ Comprehensive documentation is available in the project:
 - **[PROJECT_OUTLINE_V4.md](DRLWorkbench_Notes_MD/PROJECT_OUTLINE_ML_DRL_ANALYSIS_V4.md)** - Enhanced features including MLOps, API service, risk management
 - **[PROJECT_QUESTIONS_V3.md](_Notes_MD/PROJECT_QUESTIONS_V3.md)** - 170+ technical questions covering all aspects
 - **[PROJECT_ANSWERS_V3.md](_Notes_MD/PROJECT_ANSWERS_V3.md)** - Detailed implementation decisions and rationale
+  
+<img width="805" height="896" alt="Project Structure" src="https://github.com/user-attachments/assets/ee71cf9d-8ff3-46ff-893a-2bbc30ca0b01" />
 
+<<<<<<< HEAD
 ## Project Structure
 
 project_root/
@@ -132,6 +135,8 @@ project_root/
 │   └── run_pipeline.py          # main: config → data → model → analysis → display
 ├── requirements.txt
 └── README.md
+=======
+>>>>>>> bdcca968ac3e1864af71f5f3e6e006eb45e45cfb
 ``` # Configuration files
 
 
