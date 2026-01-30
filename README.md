@@ -79,7 +79,7 @@ Comprehensive documentation is available in the project:
 - **[PROJECT_ANSWERS_V3.md](_Notes_MD/PROJECT_ANSWERS_V3.md)** - Detailed implementation decisions and rationale
 
 ## Project Structure
-```
+
 project_root/
 ├── configs/
 │   ├── default.yaml
@@ -132,7 +132,6 @@ project_root/
 │   └── run_pipeline.py          # main: config → data → model → analysis → display
 ├── requirements.txt
 └── README.md
-```
 ``` # Configuration files
 
 
