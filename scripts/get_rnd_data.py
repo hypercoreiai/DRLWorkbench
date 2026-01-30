@@ -17,6 +17,7 @@ import pandas as pd
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
+from src.data import OHLCVDailyReturns
 from src.ohlcv import KrakenOHLCV, YFinanceOHLCV
 from src.indicators import IndicatorFetcher
 
@@ -45,6 +46,21 @@ def select_random_symbols(symbols: list[str], count: int = 5) -> list[str]:
     return random.sample(symbols, count)
 
 
+def _add_daily_returns_and_save(
+    df: pd.DataFrame,
+    filepath: Path,
+    returns_handler: OHLCVDailyReturns,
+    interval: str | None,
+    index_in_csv: bool = True,
+) -> None:
+    """Add daily_returns when applicable (handles OHLCV and single-column data), then save."""
+    df_out = returns_handler.add_daily_returns_if_applicable(df, interval=interval)
+    df_out.to_csv(filepath, index=index_in_csv)
+    n = len(df_out)
+    has_returns = "daily_returns" in df_out.columns
+    print(f"  ✓ Saved {n} rows to {filepath.name}" + (" (with daily_returns)" if has_returns else ""))
+
+
 def download_kraken_data(symbols: list[str], period: str = "1y") -> None:
     """Download Kraken crypto OHLCV data."""
     print("\n" + "=" * 70)
@@ -52,6 +68,7 @@ def download_kraken_data(symbols: list[str], period: str = "1y") -> None:
     print("=" * 70)
     
     kraken = KrakenOHLCV()
+    returns_handler = OHLCVDailyReturns(interval="1d")
     raw_dir = project_root / "data" / "raw"
     raw_dir.mkdir(parents=True, exist_ok=True)
     
@@ -65,12 +82,10 @@ def download_kraken_data(symbols: list[str], period: str = "1y") -> None:
                 print(f"  ✗ No data returned for {symbol}")
                 continue
             
-            # Save to CSV
             date_str = datetime.now().strftime("%Y%m%d")
             filename = f"{symbol.replace('/', '_')}_{date_str}.csv"
             filepath = raw_dir / filename
-            df.to_csv(filepath)
-            print(f"  ✓ Saved {len(df)} rows to {filename}")
+            _add_daily_returns_and_save(df, filepath, returns_handler, interval="1d", index_in_csv=True)
             
         except Exception as e:
             print(f"  ✗ Error downloading {symbol}: {e}")
@@ -83,6 +98,7 @@ def download_yfinance_data(symbols: list[str], period: str = "3y") -> None:
     print("=" * 70)
     
     yfinance = YFinanceOHLCV()
+    returns_handler = OHLCVDailyReturns(interval="1d")
     raw_dir = project_root / "data" / "raw"
     raw_dir.mkdir(parents=True, exist_ok=True)
     
@@ -96,12 +112,10 @@ def download_yfinance_data(symbols: list[str], period: str = "3y") -> None:
                 print(f"  ✗ No data returned for {symbol}")
                 continue
             
-            # Save to CSV
             date_str = datetime.now().strftime("%Y%m%d")
             filename = f"{symbol}_{date_str}.csv"
             filepath = raw_dir / filename
-            df.to_csv(filepath)
-            print(f"  ✓ Saved {len(df)} rows to {filename}")
+            _add_daily_returns_and_save(df, filepath, returns_handler, interval="1d", index_in_csv=True)
             
         except Exception as e:
             print(f"  ✗ Error downloading {symbol}: {e}")
@@ -114,6 +128,7 @@ def download_indicators_data(symbols: list[str]) -> None:
     print("=" * 70)
     
     fetcher = IndicatorFetcher()
+    returns_handler = OHLCVDailyReturns(interval="1d")
     raw_dir = project_root / "data" / "raw"
     raw_dir.mkdir(parents=True, exist_ok=True)
     
@@ -137,13 +152,11 @@ def download_indicators_data(symbols: list[str]) -> None:
                 continue
             
             df = results[symbol]
-            
-            # Save to CSV
             date_str = datetime.now().strftime("%Y%m%d")
             filename = f"{symbol}_{date_str}.csv"
             filepath = raw_dir / filename
-            df.to_csv(filepath, index=False)
-            print(f"  ✓ Saved {len(df)} rows to {filename}")
+            # Indicators often have date as column and single 'value' column; save with index=False
+            _add_daily_returns_and_save(df, filepath, returns_handler, interval="1d", index_in_csv=False)
             
         except Exception as e:
             print(f"  ✗ Error downloading {symbol}: {e}")
