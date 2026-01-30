@@ -77,62 +77,9 @@ Comprehensive documentation is available in the project:
 - **[PROJECT_OUTLINE_V4.md](DRLWorkbench_Notes_MD/PROJECT_OUTLINE_ML_DRL_ANALYSIS_V4.md)** - Enhanced features including MLOps, API service, risk management
 - **[PROJECT_QUESTIONS_V3.md](_Notes_MD/PROJECT_QUESTIONS_V3.md)** - 170+ technical questions covering all aspects
 - **[PROJECT_ANSWERS_V3.md](_Notes_MD/PROJECT_ANSWERS_V3.md)** - Detailed implementation decisions and rationale
+  
+<img width="805" height="896" alt="Project Structure" src="https://github.com/user-attachments/assets/ee71cf9d-8ff3-46ff-893a-2bbc30ca0b01" />
 
-## Project Structure
-...
-project_root/
-├── configs/
-│   ├── default.yaml
-│   ├── dl_portfolio.yaml
-│   └── drl_ppo.yaml
-├── src/
-│   ├── ohlcv/                    # EXISTING
-│   │   ├── _period.py
-│   │   ├── yfinance_ohlcv.py
-│   │   ├── clean_ohlcv.py
-│   │   └── ...
-│   ├── indicators/               # EXISTING
-│   │   ├── get_indicators.py     # FRED, BEA, yfinance index/stock
-│   │   ├── clean_indicators.py
-│   │   └── ohlcv_indicators.py   # NEW: Belantari-style tech indicators on OHLCV
-│   ├── normalize/                # EXISTING
-│   │   ├── revin.py              # RevinTransform + RevIN (PyTorch)
-│   │   └── ...
-│   ├── data/                     # NEW: unified data API
-│   │   ├── __init__.py
-│   │   ├── pipeline.py          # DataPipeline(config): OHLCV → clean → indicators → scale → sequences/NF
-│   │   ├── sequence.py          # create_dataset, to_neuralforecast_format, volatility helper
-│   │   └── api.py               # get_data(config) → X_train, y_train, X_test, y_test, metadata
-│   ├── models/
-│   │   ├── __init__.py
-│   │   ├── base.py               # abstract fit/predict or train/act
-│   │   ├── neuralforecast/       # NeuralForecast wrappers (LSTM, NHITS, N-BEATS, TFT, etc.)
-│   │   │   ├── adapter.py        # fit(train_df), predict() with long-format
-│   │   │   └── ...
-│   │   ├── pytorch/              # optional custom LSTM, LSTM-CNN, LSTM-Attention (nn.Module)
-│   │   ├── drl/                  # PPO, A2C, DDPG (PyTorch)
-│   │   │   ├── ppo.py
-│   │   │   └── ...
-│   │   └── portfolio/            # risk_parity, omega, cvar, mdv, fgp
-│   │       ├── risk_parity.py
-│   │       ├── omega.py
-│   │       └── ...
-│   ├── analysis/
-│   │   ├── __init__.py
-│   │   ├── forecasting.py       # MSE, MAPE, MAE
-│   │   ├── risk.py              # Sharpe, Omega, CVaR, volatility
-│   │   ├── summary.py           # annual return, vol, skew, kurtosis
-│   │   └── selection.py         # median / momentum → buy list
-│   ├── display/
-│   │   ├── __init__.py
-│   │   ├── style.py
-│   │   ├── plots.py              # loss, actual_vs_pred, heatmap, cumulative_returns
-│   │   ├── tables.py
-│   │   └── api.py
-│   └── run_pipeline.py          # main: config → data → model → analysis → display
-├── requirements.txt
-└── README.md
-...
 ``` # Configuration files
 
 
