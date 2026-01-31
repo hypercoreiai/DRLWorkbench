@@ -98,3 +98,41 @@ def plot_feature_correlation_bar(corr: pd.Series, title: str, ax=None):
     ax.set_title(title)
     ax.tick_params(axis="x", rotation=90)
     return ax
+
+
+def plot_training_history(history: dict, title: str = "Training History", ax=None):
+    """Plot train and validation loss curves (Phase 8.2)."""
+    import matplotlib.pyplot as plt
+
+    if ax is None:
+        _, ax = plt.subplots(figsize=(8, 4))
+    n_epochs = len(history.get("train_loss", history.get("val_loss", [])))
+    epochs = range(1, n_epochs + 1)
+    if "train_loss" in history:
+        ax.plot(epochs, history["train_loss"], label="Train Loss")
+    if "val_loss" in history:
+        ax.plot(epochs, history["val_loss"], label="Validation Loss")
+    ax.set_xlabel("Epoch")
+    ax.set_ylabel("Loss")
+    ax.set_title(title)
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+    return ax
+
+
+def plot_scatter_actual_vs_pred(actual: np.ndarray, predicted: np.ndarray, title: str, ax=None):
+    """Scatter plot of actual vs predicted (Phase 8.2)."""
+    import matplotlib.pyplot as plt
+
+    if ax is None:
+        _, ax = plt.subplots(figsize=(6, 6))
+    ax.scatter(actual, predicted, alpha=0.5, s=10)
+    mn = min(actual.min(), predicted.min())
+    mx = max(actual.max(), predicted.max())
+    ax.plot([mn, mx], [mn, mx], "r--", label="Perfect")
+    ax.set_xlabel("Actual")
+    ax.set_ylabel("Predicted")
+    ax.set_title(title)
+    ax.legend()
+    ax.set_aspect("equal", adjustable="box")
+    return ax

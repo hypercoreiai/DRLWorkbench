@@ -1,11 +1,15 @@
-"""
+python """
 PatchTST Crypto Price & Returns Forecasting Pipeline
 """
-
 from __future__ import annotations
+import sys
+from pathlib import Path
+
+# Add project root to path
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
 
 import argparse
-from pathlib import Path
 from typing import Any, Dict, Tuple
 
 import numpy as np
@@ -15,9 +19,11 @@ import yaml
 
 from src.utils import ConfigError
 from src.utils.logging import setup_logging
-from src.analysis.selection import select_features_correlation
+from src.data.validator import DataValidator
+from src.analysis.selection import select_features_correlation, select_features_patchtst
 from src.analysis.forecast_metrics import (
     regression_metrics,
+    mase,
     directional_accuracy,
     coverage_rate,
     horizon_metrics,
@@ -37,6 +43,8 @@ from src.display.forecast_plots import (
     plot_calibration_curve,
     plot_correlation_heatmap,
     plot_feature_correlation_bar,
+    plot_training_history,
+    plot_scatter_actual_vs_pred,
 )
 from src.models.patchtst import PatchTST, PatchTSTConfig, PatchTSTTrainer, predict_batches
 
@@ -75,7 +83,10 @@ def _make_dataloaders(
         t_scaled = target_scaler.transform(t_ser)
         X, y = create_multistep_sequences(f_scaled, t_scaled, seq_len, pred_len)
         if X.size == 0:
-            raise ValueError("Not enough data to create sequences")
+            raise ValueError(
+                "Not enough data to create sequences. "
+                f"Split='{key}', split_len={len(t_ser)}, seq_len={seq_len}, pred_len={pred_len}"
+            )
         dataset = torch.utils.data.TensorDataset(
             torch.FloatTensor(X), torch.FloatTensor(y)
         )
@@ -88,6 +99,45 @@ def _make_dataloaders(
         meta[f"{key}_index"] = t_ser.index[seq_len : len(t_ser) - pred_len + 1]
         meta[f"{key}_target_raw"] = t_ser.values
     return loaders, feature_scaler, target_scaler, meta
+
+
+def _adjust_window_sizes(
+    total_len: int,
+    train_ratio: float,
+    val_ratio: float,
+    seq_len: int,
+    pred_len: int,
+    logger,
+) -> Tuple[int, int]:
+    train_end = int(total_len * train_ratio)
+    val_end = int(total_len * (train_ratio + val_ratio))
+    train_len = train_end
+    val_len = max(0, val_end - train_end)
+    test_len = max(0, total_len - val_end)
+    min_split = max(0, min(train_len, val_len, test_len))
+
+    min_required = seq_len + pred_len + 1
+    if min_split >= min_required:
+        return seq_len, pred_len
+
+    original = (seq_len, pred_len)
+    seq_len = min(seq_len, max(10, min_split - pred_len - 1))
+    if min_split < seq_len + pred_len + 1:
+        pred_len = max(1, min_split - seq_len - 1)
+    if min_split < seq_len + pred_len + 1:
+        raise ValueError(
+            "Not enough data after split to build sequences. "
+            f"min_split={min_split}, seq_len={seq_len}, pred_len={pred_len}"
+        )
+    if original != (seq_len, pred_len):
+        logger.warning(
+            "Adjusted window sizes due to limited data: seq_len %d->%d, pred_len %d->%d",
+            original[0],
+            seq_len,
+            original[1],
+            pred_len,
+        )
+    return seq_len, pred_len
 
 
 def _collect_targets(loader: torch.utils.data.DataLoader) -> np.ndarray:
@@ -123,18 +173,44 @@ def run_forecast_pipeline(config_path: str, output_dir: str) -> None:
     data_pipe = PatchTSTDataPipeline(config)
     data_bundle = data_pipe.run()
 
+    # V3: Pre-flight data validation (PROJECT_OUTLINE Section 2.1)
+    validator = DataValidator()
+    try:
+        validator.check_missing_data(data_bundle.features, threshold=0.05)
+        if len(data_bundle.target_returns.dropna()) >= 10:
+            validator.check_stationarity(data_bundle.target_returns.dropna())
+        collinear = validator.check_collinearity(data_bundle.features, threshold=0.95)
+        if collinear:
+            logger.info("High collinearity pairs (|r|>=0.95): %d", len(collinear))
+    except Exception as e:
+        logger.warning("Data validation: %s", e)
+
     features = data_bundle.features
     target_price = data_bundle.target_price
     target_returns = data_bundle.target_returns
     benchmarks = data_bundle.benchmarks
 
-    # Feature selection
+    # Feature selection (Phase 2: correlation, VIF, top-N)
     sel_cfg = config.get("data", {}).get("feature_selection", {})
-    threshold = sel_cfg.get("threshold", 0.05)
-    selected = select_features_correlation(features, target_returns, threshold=threshold)
-    if selected:
-        features = features[selected]
-    logger.info("Selected %d features", features.shape[1])
+    use_patchtst_sel = sel_cfg.get("use_patchtst", True)
+    if use_patchtst_sel:
+        selected, sel_report = select_features_patchtst(
+            features,
+            target_returns,
+            min_corr=float(sel_cfg.get("min_corr", 0.05)),
+            max_pair_corr=float(sel_cfg.get("max_pair_corr", 0.95)),
+            max_vif=float(sel_cfg.get("max_vif", 5.0)),
+            top_n=sel_cfg.get("top_n"),
+        )
+        if selected:
+            features = features[selected]
+        logger.info("Feature selection: %s -> %d features", sel_report, features.shape[1])
+    else:
+        threshold = sel_cfg.get("threshold", 0.05)
+        selected = select_features_correlation(features, target_returns, threshold=threshold)
+        if selected:
+            features = features[selected]
+        logger.info("Selected %d features", features.shape[1])
 
     # Correlation plots
     try:
@@ -156,6 +232,24 @@ def run_forecast_pipeline(config_path: str, output_dir: str) -> None:
     batch_size = int(config.get("model", {}).get("batch_size", 64))
     epochs = int(config.get("model", {}).get("epochs", 50))
 
+    seq_len, pred_len = _adjust_window_sizes(
+        total_len=len(features),
+        train_ratio=train_ratio,
+        val_ratio=val_ratio,
+        seq_len=seq_len,
+        pred_len=pred_len,
+        logger=logger,
+    )
+
+    patch_len = int(config.get("model", {}).get("patch_len", 16))
+    stride = int(config.get("model", {}).get("stride", 8))
+    if patch_len > seq_len:
+        logger.warning("Adjusted patch_len due to seq_len: %d->%d", patch_len, seq_len)
+        patch_len = seq_len
+    if stride > patch_len:
+        logger.warning("Adjusted stride due to patch_len: %d->%d", stride, patch_len)
+        stride = patch_len
+
     # Price model
     loaders_price, _, target_scaler_price, meta_price = _make_dataloaders(
         features, target_price, seq_len, pred_len, train_ratio, val_ratio, batch_size
@@ -169,8 +263,8 @@ def run_forecast_pipeline(config_path: str, output_dir: str) -> None:
         n_encoder_layers=int(config.get("model", {}).get("n_encoder_layers", 6)),
         d_ff=int(config.get("model", {}).get("d_ff", 512)),
         dropout=float(config.get("model", {}).get("dropout", 0.1)),
-        patch_len=int(config.get("model", {}).get("patch_len", 16)),
-        stride=int(config.get("model", {}).get("stride", 8)),
+        patch_len=patch_len,
+        stride=stride,
     )
     price_model = PatchTST(price_config)
     price_trainer = PatchTSTTrainer(price_model, loaders_price["train"], loaders_price["val"], price_config)
@@ -190,8 +284,8 @@ def run_forecast_pipeline(config_path: str, output_dir: str) -> None:
         n_encoder_layers=int(config.get("model", {}).get("n_encoder_layers", 6)),
         d_ff=int(config.get("model", {}).get("d_ff", 512)),
         dropout=float(config.get("model", {}).get("dropout", 0.1)),
-        patch_len=int(config.get("model", {}).get("patch_len", 16)),
-        stride=int(config.get("model", {}).get("stride", 8)),
+        patch_len=patch_len,
+        stride=stride,
     )
     ret_model = PatchTST(ret_config)
     ret_trainer = PatchTSTTrainer(ret_model, loaders_ret["train"], loaders_ret["val"], ret_config)
@@ -271,11 +365,23 @@ def run_forecast_pipeline(config_path: str, output_dir: str) -> None:
     metrics.append({"model": "naive_price", **price_naive_metrics})
     metrics.append({"model": "naive_returns", **ret_naive_metrics})
 
+    # MASE (Phase 7: MASE < 1 = better than baseline)
+    price_mase_val = mase(price_test_true, price_test_pred, price_naive)
+    ret_mase_val = mase(ret_test_true, ret_test_pred, ret_naive)
+    metrics[0]["mase"] = price_mase_val
+    metrics[1]["mase"] = ret_mase_val
+
     # Information ratio for returns vs benchmark (horizon 1)
-    if not benchmarks.empty:
-        bench_series = benchmarks.iloc[-len(meta_ret["test_index"]):, 0]
-        ir = information_ratio(ret_test_pred[:, 0], bench_series.values)
-        metrics.append({"model": "patchtst_returns", "information_ratio": ir})
+    if not benchmarks.empty and len(meta_ret["test_index"]) > 0:
+        # Align benchmark to test dates (PROJECT_OUTLINE: proper alignment)
+        bench_aligned = benchmarks.reindex(meta_ret["test_index"]).ffill().bfill()
+        if bench_aligned.iloc[:, 0].notna().sum() >= 2:
+            ir = information_ratio(
+                ret_test_pred[:, 0],
+                bench_aligned.iloc[:, 0].values,
+            )
+            if not np.isnan(ir):
+                metrics.append({"model": "patchtst_returns", "information_ratio": ir})
 
     metrics_df = pd.DataFrame(metrics)
     metrics_df.to_csv(metrics_dir / "forecast_metrics.csv", index=False)
@@ -336,6 +442,28 @@ def run_forecast_pipeline(config_path: str, output_dir: str) -> None:
     # Save training history
     pd.DataFrame(price_history).to_csv(metrics_dir / "price_training_history.csv", index=False)
     pd.DataFrame(ret_history).to_csv(metrics_dir / "returns_training_history.csv", index=False)
+
+    # Phase 8.2: Training curves and scatter plots
+    ax = plot_training_history(price_history, "Price Model Training")
+    ax.figure.tight_layout()
+    ax.figure.savefig(plot_dir / "price_training_history.png", dpi=150)
+    ax = plot_training_history(ret_history, "Returns Model Training")
+    ax.figure.tight_layout()
+    ax.figure.savefig(plot_dir / "returns_training_history.png", dpi=150)
+    ax = plot_scatter_actual_vs_pred(
+        price_test_true.flatten(),
+        price_test_pred.flatten(),
+        "Price: Actual vs Predicted",
+    )
+    ax.figure.tight_layout()
+    ax.figure.savefig(plot_dir / "price_scatter_actual_vs_pred.png", dpi=150)
+    ax = plot_scatter_actual_vs_pred(
+        ret_test_true.flatten(),
+        ret_test_pred.flatten(),
+        "Returns: Actual vs Predicted",
+    )
+    ax.figure.tight_layout()
+    ax.figure.savefig(plot_dir / "returns_scatter_actual_vs_pred.png", dpi=150)
 
     logger.info("PatchTST pipeline completed. Outputs in: %s", out)
 

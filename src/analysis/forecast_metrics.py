@@ -8,8 +8,8 @@ import numpy as np
 
 
 def regression_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, float]:
-    y_true = np.asarray(y_true)
-    y_pred = np.asarray(y_pred)
+    y_true = np.asarray(y_true).flatten()
+    y_pred = np.asarray(y_pred).flatten()
     if y_true.size == 0:
         return {
             "mse": np.nan,
@@ -18,16 +18,51 @@ def regression_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, floa
             "mape": np.nan,
             "smape": np.nan,
             "r2": np.nan,
+            "mase": np.nan,
         }
     mse = np.mean((y_true - y_pred) ** 2)
     rmse = np.sqrt(mse)
     mae = np.mean(np.abs(y_true - y_pred))
-    mape = np.mean(np.abs((y_true - y_pred) / (y_true + 1e-10))) * 100
-    smape = np.mean(2 * np.abs(y_true - y_pred) / (np.abs(y_true) + np.abs(y_pred) + 1e-10)) * 100
+    # MAPE: exclude zeros to avoid inf; standard formula |(actual-pred)/actual|*100
+    denom = np.abs(y_true)
+    valid = denom > 1e-10
+    mape = np.nanmean(np.where(valid, np.abs((y_true - y_pred) / y_true) * 100, np.nan))
+    # SMAPE: 100 * mean(2|pred-actual| / (|actual|+|pred|)); range 0-100
+    smape = np.mean(
+        2 * np.abs(y_true - y_pred) / (np.abs(y_true) + np.abs(y_pred) + 1e-10)
+    ) * 100
     ss_res = np.sum((y_true - y_pred) ** 2)
     ss_tot = np.sum((y_true - np.mean(y_true)) ** 2)
     r2 = 1 - ss_res / (ss_tot + 1e-10)
-    return {"mse": mse, "rmse": rmse, "mae": mae, "mape": mape, "smape": smape, "r2": r2}
+    return {"mse": mse, "rmse": rmse, "mae": mae, "mape": mape, "smape": smape, "r2": r2, "mase": np.nan}
+
+
+def mase(
+    y_true: np.ndarray,
+    y_pred: np.ndarray,
+    y_naive: np.ndarray,
+) -> float:
+    """
+    Mean Absolute Scaled Error. MASE < 1 means better than naive baseline.
+
+    Args:
+        y_true: Actual values.
+        y_pred: Predicted values.
+        y_naive: Naive baseline predictions (e.g. persistence).
+
+    Returns:
+        MASE = MAE(forecast) / MAE(naive)
+    """
+    y_true = np.asarray(y_true).flatten()
+    y_pred = np.asarray(y_pred).flatten()
+    y_naive = np.asarray(y_naive).flatten()
+    if y_true.size == 0:
+        return np.nan
+    mae_pred = np.mean(np.abs(y_true - y_pred))
+    mae_naive = np.mean(np.abs(y_true - y_naive))
+    if mae_naive < 1e-12:
+        return np.nan
+    return mae_pred / mae_naive
 
 
 def directional_accuracy(y_true: np.ndarray, y_pred: np.ndarray) -> float:

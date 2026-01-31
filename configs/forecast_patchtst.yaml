@@ -7,7 +7,11 @@ data:
   train_ratio: 0.7
   val_ratio: 0.15
   feature_selection:
-    threshold: 0.05
+    use_patchtst: true
+    min_corr: 0.05
+    max_pair_corr: 0.95
+    max_vif: 5.0
+    top_n: 40
   benchmarks: ["BTC-USD", "ETH-USD"]
 
 model:
