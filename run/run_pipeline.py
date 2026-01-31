@@ -85,12 +85,12 @@ def run_pipeline(
     target_data = getattr(data_bundle, "X_train", None)
     
     if target_data is not None and hasattr(target_data, "index"):
-         try:
-             # Check crypto continuity
-             validator.check_crypto_continuity(target_data)
-             logger.info("Crypto continuity check passed.")
-         except DataValidationError as e:
-             logger.warning("Crypto continuity check failed: %s", e)
+        try:
+            # Check crypto continuity
+            validator.check_crypto_continuity(target_data)
+            logger.info("Crypto continuity check passed.")
+        except DataValidationError as e:
+            logger.warning("Crypto continuity check failed: %s", e)
     
     # 5. Stress Testing (V4)
     # Check if stress testing is requested in config
@@ -116,10 +116,9 @@ def run_pipeline(
         report = walker.run()
         logger.info("Backtest completed. Steps: %d", len(report.get("regime_info", [])))
         state["backtest_report"] = report
-    except Exception as e:
-        logger.error("Backtest failed: %s", e)
-        # Don't crash entire pipeline, save what we have
-        
+    except Exception:
+        logger.exception("Backtest failed during walk-forward backtest.")
+        raise
     state["config"] = config
     state["run_id"] = run_id
     checkpoint_path = out / "checkpoint.pkl"
