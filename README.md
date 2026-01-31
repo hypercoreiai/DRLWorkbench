@@ -28,45 +28,31 @@ A comprehensive Python framework for developing, testing, and deploying Deep Rei
 git clone https://github.com/hypercoreiai/DRLWorkbench.git
 cd DRLWorkbench
 
-# Install in development mode
-pip install -e .
+# Create a virtual environment (optional but recommended)
+python -m venv .venv
 
-# Or install with development dependencies
-pip install -e ".[dev]"
+# Activate the virtual environment
+# Windows:
+.venv\Scripts\activate
+# Linux/Mac:
+source .venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
 ```
 
 ## Quick Start
+The main entry point for the pipeline is `run_pipeline.py`.
 
-```python
-import pandas as pd
-import numpy as np
-from drlworkbench import setup_logger, DataValidator, RegimeDetector
+```bash
+# Run the pipeline with default configuration
+python run_pipeline.py
 
-# Set up logging
-logger = setup_logger("my_analysis")
+# Run with a specific config file
+python run_pipeline.py --config configs/my_config.yaml
 
-# Generate or load your data
-data = pd.DataFrame({
-    'open': [...],
-    'high': [...],
-    'low': [...],
-    'close': [...],
-    'volume': [...]
-}, index=pd.date_range('2020-01-01', periods=252))
-
-# Validate data quality
-validator = DataValidator()
-results = validator.validate_all(data)
-
-if results['is_valid']:
-    logger.info("✓ Data validation passed")
-    
-    # Detect market regimes
-    returns = data['close'].pct_change().dropna()
-    detector = RegimeDetector(method='kmeans', n_regimes=3)
-    regimes = detector.fit_predict(returns)
-    
-    logger.info(f"Detected {len(regimes.unique())} regimes")
+# Resume from a checkpoint
+python run_pipeline.py --resume outputs/checkpoint.pkl
 ```
 
 ## Documentation
@@ -77,11 +63,8 @@ Comprehensive documentation is available in the project:
 - **[PROJECT_OUTLINE_V4.md](DRLWorkbench_Notes_MD/PROJECT_OUTLINE_ML_DRL_ANALYSIS_V4.md)** - Enhanced features including MLOps, API service, risk management
 - **[PROJECT_QUESTIONS_V3.md](_Notes_MD/PROJECT_QUESTIONS_V3.md)** - 170+ technical questions covering all aspects
 - **[PROJECT_ANSWERS_V3.md](_Notes_MD/PROJECT_ANSWERS_V3.md)** - Detailed implementation decisions and rationale
-  
+
 <img width="805" height="896" alt="Project Structure" src="https://github.com/user-attachments/assets/ee71cf9d-8ff3-46ff-893a-2bbc30ca0b01" />
-
-``` # Configuration files
-
 
 ## Running Tests
 
@@ -109,7 +92,7 @@ pytest tests/test_validation/ -v
 ### Utils Module
 - `setup_logger()` - Centralized logging configuration
 - `Checkpoint` - Save/load state for long-running operations
-- Custom exception hierarchy for better error handling
+- `Custom Exceptions` - Hierarchy for better error handling
 
 ### Backtesting Module
 - `BacktestEngine` - Core backtesting with transaction costs
