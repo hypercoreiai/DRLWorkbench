@@ -1,4 +1,4 @@
-python """
+"""
 PatchTST Crypto Price & Returns Forecasting Pipeline
 """
 from __future__ import annotations
