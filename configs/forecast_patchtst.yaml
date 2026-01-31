@@ -1,0 +1,27 @@
+# PatchTST Forecast Pipeline Configuration
+
+data:
+  symbols_file: "src/symbols/portfolio"
+  primary_ticker: "BTC-USD"
+  period: "2y"
+  train_ratio: 0.7
+  val_ratio: 0.15
+  feature_selection:
+    threshold: 0.05
+  benchmarks: ["BTC-USD", "ETH-USD"]
+
+model:
+  seq_len: 504
+  pred_len: 30
+  batch_size: 64
+  epochs: 50
+  d_model: 256
+  n_heads: 8
+  n_encoder_layers: 6
+  d_ff: 512
+  dropout: 0.1
+  patch_len: 16
+  stride: 8
+
+display:
+  run_id: "patchtst_forecast"
