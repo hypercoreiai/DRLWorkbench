@@ -92,7 +92,7 @@ pytest tests/test_validation/ -v
 ### Utils Module
 - `setup_logger()` - Centralized logging configuration
 - `Checkpoint` - Save/load state for long-running operations
-- `Custom Exceptions` - Hierarchy for better error handling
+- `Exception Classes` - Hierarchy for better error handling
 
 ### Backtesting Module
 - `BacktestEngine` - Core backtesting with transaction costs
